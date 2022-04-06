@@ -49,19 +49,22 @@ void q_free(struct list_head *l)
  */
 bool q_insert_head(struct list_head *head, char *s)
 {
-    if (!head)
+    if (!head) {
         return false;
+    }
 
     element_t *ele = malloc(sizeof(element_t));
-    if (!ele)
+    if (!ele) {
         return false;
+    }
+
+    ele->value = strdup(s);
+    if (!ele->value) {
+        free(ele);
+        return false;
+    }
     list_add(&ele->list, head);
 
-    char *str = malloc(sizeof(char) * strlen(s) + 1);
-    if (!str)
-        return false;
-    ele->value = str;
-    strncpy(ele->value, s, strlen(s) + 1);
     return true;
 }
 
@@ -74,19 +77,20 @@ bool q_insert_head(struct list_head *head, char *s)
  */
 bool q_insert_tail(struct list_head *head, char *s)
 {
-    if (!head)
+    if (!head) {
         return false;
-
+    }
     element_t *ele = malloc(sizeof(element_t));
-    if (!ele)
+    if (!ele) {
         return false;
+    }
+    ele->value = strdup(s);
+    if (!ele->value) {
+        free(ele);
+        return false;
+    }
     list_add_tail(&ele->list, head);
 
-    char *str = malloc(sizeof(char) * strlen(s) + 1);
-    if (!str)
-        return false;
-    ele->value = str;
-    strncpy(ele->value, s, strlen(s) + 1);
     return true;
 }
 
@@ -111,7 +115,8 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
     element_t *entry = list_first_entry(head, element_t, list);
     list_del(&entry->list);
     if (sp) {
-        strncpy(sp, entry->value, bufsize);
+        strncpy(sp, entry->value, bufsize - 1);
+        sp[bufsize - 1] = '\0';
     }
     return entry;
 }
@@ -199,16 +204,36 @@ bool q_delete_mid(struct list_head *head)
 bool q_delete_dup(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
-    if (!head)
+    if (!head) {
         return false;
+    }
+    if (list_empty(head)) {
+        return true;
+    }
+
     element_t *n, *s;
     char *p = "";
+    bool isdup = false;
+
     list_for_each_entry_safe (n, s, head, list) {
-        if (!strncmp(n->value, p, MAX_STR_SIZE)) {
+        if (strcmp(p, n->value) == 0) {
             list_del(&n->list);
             q_release_element(n);
+            isdup = true;
         } else {
             p = n->value;
+        }
+
+        if ((n->list.next != head) &&
+            (strcmp(n->value,
+                    list_entry(n->list.next, element_t, list)->value) == 0)) {
+            list_del(&n->list);
+            q_release_element(n);
+            isdup = true;
+        } else if (isdup) {
+            list_del(&n->list);
+            q_release_element(n);
+            isdup = false;
         }
     }
     return true;
